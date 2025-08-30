@@ -8,24 +8,44 @@ datasource db {
 }
 
 model Source {
-  id        Int       @id @default(autoincrement())
-  name      String
-  rssUrl    String
-  siteUrl   String
-  createdAt DateTime  @default(now())
-  articles  Article[]
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  feed     String
+  domain   String?
+  articles Article[]
+
+  @@index([name])
+  @@index([feed])
 }
 
 model Article {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   sourceId    Int
-  url         String   @unique
+  url         String    @unique
   title       String
   author      String?
   publishedAt DateTime?
   content     String?
   summary     String
+  imageUrl    String?
   createdAt   DateTime  @default(now())
 
-  source      Source   @relation(fields: [sourceId], references: [id])
+  // tagging and scoring
+  teamTags   Json?
+  teamTagIdx String    @default("")
+  score      Int?
+  ingestedAt DateTime?
+
+  // summary meta
+  summaryOrigin String?
+  summaryModel  String?
+  summaryChars  Int?
+  summarizedAt  DateTime?
+
+  source Source @relation(fields: [sourceId], references: [id])
+
+  @@index([publishedAt, createdAt, id])
+  @@index([sourceId])
+  @@index([score])
+  @@index([teamTagIdx])
 }
