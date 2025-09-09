@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
+    const cookieStore = await cookies();
+    const user = await getCurrentUser(cookieStore);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -32,7 +34,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const cookieStore = await cookies();
+    const user = await getCurrentUser(cookieStore);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -1,12 +1,14 @@
 export const dynamic = 'force-dynamic';
 
 import { getCurrentUser } from '@/lib/auth';
+import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
+  const cookieStore = await cookies();
+  const user = await getCurrentUser(cookieStore);
   
   if (!user) {
     redirect('/login');

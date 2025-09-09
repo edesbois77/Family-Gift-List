@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { getCurrentUser } from '@/lib/auth';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export default async function Home() {
-  const user = await getCurrentUser();
+  const cookieStore = await cookies();
+  const user = await getCurrentUser(cookieStore);
   
   if (user) {
     redirect('/dashboard');
