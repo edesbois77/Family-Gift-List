@@ -56,7 +56,6 @@ export async function POST(req: NextRequest) {
       data: {
         userId: user.id,
         giftId,
-        giftListId: gift.giftListId,
         quantity: quantity || 1,
         notes
       }

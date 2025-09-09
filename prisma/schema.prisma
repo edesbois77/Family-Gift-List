@@ -14,7 +14,7 @@ model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
-  name      String
+  name      String?
   createdAt DateTime @default(now()) @map("created_at")
 
   giftLists    GiftList[]
@@ -43,19 +43,19 @@ model GiftList {
 
 model Gift {
   id           Int     @id @default(autoincrement())
-  listId       Int     @map("list_id")
+  giftListId   Int     @map("gift_list_id")
   title        String
   description  String?
   imageUrl     String? @map("image_url")
   price        Float?
   deliveryCost Float?  @map("delivery_cost")
-  sizeVariant  String? @map("size_variant")
+  size         String?
   productUrl   String? @map("product_url")
   quantity     Int     @default(1)
   priority     Int     @default(3)
   createdAt    DateTime @default(now()) @map("created_at")
 
-  list         GiftList      @relation(fields: [listId], references: [id])
+  giftList     GiftList      @relation(fields: [giftListId], references: [id])
   reservations Reservation[]
 
   @@map("gifts")

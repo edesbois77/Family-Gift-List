@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
         description,
         eventDate: eventDate ? new Date(eventDate) : null,
         isPublic: isPublic || false,
+        shareCode: randomUUID(),
         userId: user.id
       }
     });
