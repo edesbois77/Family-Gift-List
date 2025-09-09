@@ -47,3 +47,4 @@ export async function getCurrentUser() {
  */
 export async function clearSession() {
   cookies().set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
+}
