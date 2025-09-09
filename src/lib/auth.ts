@@ -10,7 +10,6 @@ export type User = {
   name?: string;
 }
 
-}
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get('session')?.value;
