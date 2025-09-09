@@ -22,6 +22,10 @@ export async function getCurrentUser(cookieStore: ReadonlyRequestCookies): Promi
       select: { id: true, email: true, name: true }
     });
     
+  if (!cookieStore || typeof cookieStore.get !== 'function') {
+    return null;
+  }
+  
     return user;
   } catch {
     return null;

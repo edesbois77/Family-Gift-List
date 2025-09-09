@@ -5,7 +5,18 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export default async function Home() {
-  const cookieStore = await cookies();
+  let cookieStore;
+  try {
+    cookieStore = await cookies();
+    if (!cookieStore) {
+      redirect('/login');
+      return;
+    }
+  } catch (error) {
+    redirect('/login');
+    return;
+  }
+  
   const user = await getCurrentUser(cookieStore);
   
   if (user) {
