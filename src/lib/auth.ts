@@ -25,15 +25,21 @@ export async function createSession(userId: string) {
  * Read the cookie and look up the user in our "prisma" (db.ts).
  */
 export async function getCurrentUser() {
-  const raw = cookies().get(SESSION_COOKIE)?.value;
-  if (!raw) return null;
+  try {
+    const raw = cookies().get(SESSION_COOKIE)?.value;
+    if (!raw) return null;
 
-  // token format: "<random>.<userId>" or just "<userId>"
-  const dot = raw.indexOf(".");
-  const userId = dot >= 0 ? raw.slice(dot + 1) : raw;
+    // token format: "<random>.<userId>" or just "<userId>"
+    const dot = raw.indexOf(".");
+    const userId = dot >= 0 ? raw.slice(dot + 1) : raw;
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  return user ?? null;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    return user ?? null;
+  } catch (error) {
+    // Handle cases where cookies() is called outside request scope
+    console.warn('getCurrentUser called outside request scope:', error);
+    return null;
+  }
 }
 
 /**
