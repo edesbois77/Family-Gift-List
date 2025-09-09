@@ -1,14 +1,13 @@
-// src/lib/auth.ts
+// ✅ Force this module to be server-only so it can't be imported by client components
+import "server-only";
+
 import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 
 const SESSION_COOKIE = "fg_session";
 
-/**
- * Save a cookie like "<random>.<userId>".
- * Simpler than base64 encoding and works in Edge runtime.
- */
+/** Save a cookie like "<random>.<userId>" */
 export async function createSession(userId: string) {
   const token = `${randomUUID()}.${userId}`;
   cookies().set(SESSION_COOKIE, token, {
@@ -16,19 +15,16 @@ export async function createSession(userId: string) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 60 * 24 * 30,
   });
   return token;
 }
 
-/**
- * Read the cookie and look up the user in our "prisma" (db.ts).
- */
+/** Read the cookie and look up the user in Prisma */
 export async function getCurrentUser() {
   const raw = cookies().get(SESSION_COOKIE)?.value;
   if (!raw) return null;
 
-  // token format: "<random>.<userId>" or just "<userId>"
   const dot = raw.indexOf(".");
   const userId = dot >= 0 ? raw.slice(dot + 1) : raw;
 
@@ -36,9 +32,6 @@ export async function getCurrentUser() {
   return user ?? null;
 }
 
-/**
- * Clear the cookie when signing out.
- */
 export function signOut() {
   cookies().set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
 }
