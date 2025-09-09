@@ -6,6 +6,7 @@ import { prisma } from './db';
 
 export type User = {
   id: string;
+}
 export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get('session')?.value;
