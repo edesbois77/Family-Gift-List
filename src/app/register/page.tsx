@@ -2,12 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import AuthForm from '@/components/AuthForm';
 import { getCurrentUser } from '@/lib/auth';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export default async function RegisterPage() {
-  const cookieStore = await cookies();
-  const user = await getCurrentUser(cookieStore);
+  const user = await getCurrentUser();
   
   if (user) {
     redirect('/dashboard');

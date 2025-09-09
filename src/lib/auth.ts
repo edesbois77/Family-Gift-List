@@ -1,16 +1,13 @@
 // Simple session-based auth for demo purposes
 // In production, consider using NextAuth.js or similar
 
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import { cookies } from 'next/headers';
 import { prisma } from './db';
 
 export type User = {
   id: string;
-  email: string;
-  name: string | null;
-};
-
-export async function getCurrentUser(cookieStore: ReadonlyRequestCookies): Promise<User | null> {
+export async function getCurrentUser(): Promise<User | null> {
+  const cookieStore = await cookies();
   const sessionId = cookieStore.get('session')?.value;
   
   if (!sessionId) return null;
@@ -21,18 +18,15 @@ export async function getCurrentUser(cookieStore: ReadonlyRequestCookies): Promi
       where: { id: sessionId },
       select: { id: true, email: true, name: true }
     });
-    
-  if (!cookieStore || typeof cookieStore.get !== 'function') {
-    return null;
-  }
-  
+
     return user;
   } catch {
     return null;
   }
 }
 
-export async function createSession(userId: string, cookieStore: ReadonlyRequestCookies) {
+export async function createSession(userId: string) {
+  const cookieStore = await cookies();
   cookieStore.set('session', userId, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -41,6 +35,7 @@ export async function createSession(userId: string, cookieStore: ReadonlyRequest
   });
 }
 
-export async function clearSession(cookieStore: ReadonlyRequestCookies) {
+export async function clearSession() {
+  const cookieStore = await cookies();
   cookieStore.delete('session');
 }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { createSession } from '@/lib/auth';
 
@@ -36,8 +35,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Create session
-    const cookieStore = await cookies();
-    await createSession(user.id, cookieStore);
+    await createSession(user.id);
 
     return NextResponse.json({
       user: {
