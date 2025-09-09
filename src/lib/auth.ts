@@ -37,7 +37,6 @@ export async function getCurrentUser() {
     return user ?? null;
   } catch (error) {
     // Handle cases where cookies() is called outside request scope
-    console.warn('getCurrentUser called outside request scope:', error);
     return null;
   }
 }
