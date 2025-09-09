@@ -1,45 +1,44 @@
-// Simple session-based auth for demo purposes
-// In production, consider using NextAuth.js or similar
+// src/lib/auth.ts
+import { cookies } from "next/headers";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/db";
 
-import { cookies } from 'next/headers';
-import { prisma } from './db';
+const SESSION_COOKIE = "fg_session";
 
-export type User = {
-  id: string;
-  email: string;
-  name?: string;
-}
-
-export async function getCurrentUser(): Promise<User | null> {
-  const cookieStore = await cookies();
-  const sessionId = cookieStore.get('session')?.value;
-  
-  if (!sessionId) return null;
-
-  try {
-    // In a real app, you'd validate the session token properly
-    const user = await prisma.user.findUnique({
-      where: { id: sessionId },
-      select: { id: true, email: true, name: true }
-    });
-
-    return user;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Save a cookie like "<random>.<userId>".
+ * Simpler than base64 encoding and works in Edge runtime.
+ */
 export async function createSession(userId: string) {
-  const cookieStore = await cookies();
-  cookieStore.set('session', userId, {
+  const token = `${randomUUID()}.${userId}`;
+  cookies().set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 30 // 30 days
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30, // 30 days
   });
+  return token;
 }
 
-export async function clearSession() {
-  const cookieStore = await cookies();
-  cookieStore.delete('session');
+/**
+ * Read the cookie and look up the user in our "prisma" (db.ts).
+ */
+export async function getCurrentUser() {
+  const raw = cookies().get(SESSION_COOKIE)?.value;
+  if (!raw) return null;
+
+  // token format: "<random>.<userId>" or just "<userId>"
+  const dot = raw.indexOf(".");
+  const userId = dot >= 0 ? raw.slice(dot + 1) : raw;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  return user ?? null;
+}
+
+/**
+ * Clear the cookie when signing out.
+ */
+export function signOut() {
+  cookies().set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
 }

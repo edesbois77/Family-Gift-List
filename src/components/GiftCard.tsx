@@ -1,233 +1,220 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import * as React from "react";
+import { useRouter } from "next/navigation";
 
 type Gift = {
   id: string;
   title: string;
-  description?: string;
-  imageUrl?: string;
-  productUrl?: string;
-  price?: number;
-  deliveryCost?: number;
-  size?: string;
-  quantity: number;
-  priority: number;
-  reservations: Array<{
-    id: string;
-    quantity: number;
-    isPurchased: boolean;
-    userId: string;
-  }>;
+  description: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
+  price: number | null;
+  deliveryCost: number | null;
+  size: string | null;
+  priority: number | null;      // rating 1–10
+  createdAt?: string | Date;
+  updatedAt?: string | Date;    // will show “Last edited” if present
 };
 
-type GiftCardProps = {
-  gift: Gift;
-  isOwner: boolean;
-  currentUserId?: string;
-  onReserve?: (giftId: string, quantity: number) => void;
-  onEdit?: (gift: Gift) => void;
-  onDelete?: (giftId: string) => void;
-};
+export default function GiftCard({ gift }: { gift: Gift }) {
+  const router = useRouter();
 
-export default function GiftCard({ 
-  gift, 
-  isOwner, 
-  currentUserId, 
-  onReserve, 
-  onEdit, 
-  onDelete 
-}: GiftCardProps) {
-  const [reserveQuantity, setReserveQuantity] = useState(1);
-  const [showReserveForm, setShowReserveForm] = useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const [form, setForm] = React.useState({
+    title: gift.title ?? "",
+    description: gift.description ?? "",
+    productUrl: gift.productUrl ?? "",
+    imageUrl: gift.imageUrl ?? "",
+    price: gift.price ?? "",
+    deliveryCost: gift.deliveryCost ?? "",
+    size: gift.size ?? "",
+    priority: gift.priority ?? 5,
+  });
+  const [error, setError] = React.useState<string | null>(null);
 
-  const totalReserved = gift.reservations.reduce((sum, res) => sum + res.quantity, 0);
-  const availableQuantity = gift.quantity - totalReserved;
-  const userReservation = gift.reservations.find(res => res.userId === currentUserId);
-  const isPurchased = gift.reservations.some(res => res.isPurchased);
+  const lastEdited = gift.updatedAt
+    ? new Date(gift.updatedAt).toLocaleString()
+    : gift.createdAt
+    ? new Date(gift.createdAt).toLocaleString()
+    : "";
 
-  const priorityColors = {
-    1: 'bg-gray-100 text-gray-800',
-    2: 'bg-blue-100 text-blue-800',
-    3: 'bg-yellow-100 text-yellow-800',
-    4: 'bg-orange-100 text-orange-800',
-    5: 'bg-red-100 text-red-800'
-  };
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
 
-  const priorityLabels = {
-    1: 'Low',
-    2: 'Medium',
-    3: 'Normal',
-    4: 'High',
-    5: 'Must Have!'
-  };
+    const res = await fetch(`/api/gifts/${gift.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
 
-  const handleReserve = () => {
-    if (onReserve) {
-      onReserve(gift.id, reserveQuantity);
-      setShowReserveForm(false);
-      setReserveQuantity(1);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error || `Save failed ${res.status}`);
+      return;
     }
-  };
 
+    setEditing(false);
+    router.refresh();
+  }
+
+  // ---- VIEW MODE ----
+  if (!editing) {
+    return (
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-900">{gift.title}</h3>
+            {gift.description ? (
+              <p className="text-sm text-gray-600 mt-1">{gift.description}</p>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="text-lg font-semibold text-gray-900">
+                {gift.price != null ? `£${Number(gift.price).toFixed(2)}` : "£—"}
+              </span>
+              {gift.deliveryCost != null ? (
+                <span className="text-lg font-semibold text-gray-900">
+                  Delivery £{Number(gift.deliveryCost).toFixed(2)}
+                </span>
+              ) : null}
+              {gift.size ? <span className="text-sm text-gray-600">Size: {gift.size}</span> : null}
+              {typeof gift.priority === "number" ? (
+                <span className="text-sm text-gray-600">Rating: {gift.priority}/10</span>
+              ) : null}
+            </div>
+
+            {gift.productUrl ? (
+              <a
+                href={gift.productUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block mt-3 rounded-md bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700"
+              >
+                View product
+              </a>
+            ) : null}
+
+            <div className="mt-2 text-xs text-gray-500">Last edited: {lastEdited || "—"}</div>
+
+            <div className="mt-3">
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-md border px-3 py-1 text-sm hover:bg-gray-50"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+
+          {gift.imageUrl ? (
+            <img
+              src={gift.imageUrl}
+              alt=""
+              className="w-24 h-24 object-cover rounded-md ml-4"
+            />
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- EDIT MODE ----
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      {gift.imageUrl && (
-        <div className="aspect-[4/3] w-full bg-gray-100">
-          <img
-            src={gift.imageUrl}
-            alt={gift.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
+    <div className="bg-white rounded-lg shadow p-4">
+      <form onSubmit={save} className="space-y-2">
+        {error ? (
+          <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            className="rounded-md border px-2 py-1"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Title"
+            required
+          />
+          <input
+            className="rounded-md border px-2 py-1"
+            value={form.productUrl}
+            onChange={(e) => setForm({ ...form, productUrl: e.target.value })}
+            placeholder="Product URL"
+            type="url"
           />
         </div>
-      )}
 
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">{gift.title}</h3>
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityColors[gift.priority as keyof typeof priorityColors]}`}>
-            {priorityLabels[gift.priority as keyof typeof priorityLabels]}
-          </span>
+        <textarea
+          className="w-full rounded-md border px-2 py-1"
+          rows={2}
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="Description"
+        />
+
+        <div className="grid grid-cols-3 gap-2">
+          <input
+            className="rounded-md border px-2 py-1"
+            value={form.imageUrl}
+            onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+            placeholder="Image URL"
+            type="url"
+          />
+          <input
+            className="rounded-md border px-2 py-1"
+            value={String(form.price ?? "")}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            placeholder="Price"
+            type="number"
+            step="0.01"
+          />
+          <input
+            className="rounded-md border px-2 py-1"
+            value={String(form.deliveryCost ?? "")}
+            onChange={(e) => setForm({ ...form, deliveryCost: e.target.value })}
+            placeholder="Delivery Cost"
+            type="number"
+            step="0.01"
+          />
         </div>
 
-        {gift.description && (
-          <p className="text-gray-600 text-sm mb-3">{gift.description}</p>
-        )}
-
-        <div className="space-y-2 text-sm text-gray-500 mb-4">
-          {gift.price && (
-            <div className="flex justify-between">
-              <span>Price:</span>
-              <span className="font-medium">£{gift.price.toFixed(2)}</span>
-            </div>
-          )}
-          {gift.deliveryCost && (
-            <div className="flex justify-between">
-              <span>Delivery:</span>
-              <span className="font-medium">£{gift.deliveryCost.toFixed(2)}</span>
-            </div>
-          )}
-          {gift.size && (
-            <div className="flex justify-between">
-              <span>Size:</span>
-              <span className="font-medium">{gift.size}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span>Quantity needed:</span>
-            <span className="font-medium">{gift.quantity}</span>
+        <div className="grid grid-cols-2 gap-2 items-center">
+          <input
+            className="rounded-md border px-2 py-1"
+            value={form.size}
+            onChange={(e) => setForm({ ...form, size: e.target.value })}
+            placeholder="Size"
+          />
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Rating</label>
+            <input
+              type="range"
+              min={1}
+              max={10}
+              value={Number(form.priority)}
+              onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })}
+            />
+            <span className="text-sm">{form.priority}/10</span>
           </div>
-          {!isOwner && (
-            <div className="flex justify-between">
-              <span>Available:</span>
-              <span className={`font-medium ${availableQuantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {availableQuantity}
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Reservation status for non-owners */}
-        {!isOwner && (
-          <div className="mb-4">
-            {userReservation ? (
-              <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                <p className="text-green-800 text-sm font-medium">
-                  ✓ You've reserved {userReservation.quantity} of this item
-                  {userReservation.isPurchased && ' (Purchased)'}
-                </p>
-              </div>
-            ) : isPurchased ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <p className="text-blue-800 text-sm font-medium">
-                  ✓ Someone has purchased this item
-                </p>
-              </div>
-            ) : availableQuantity > 0 ? (
-              <div className="space-y-2">
-                {!showReserveForm ? (
-                  <button
-                    onClick={() => setShowReserveForm(true)}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-                  >
-                    Reserve This Gift
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium">Quantity:</label>
-                      <select
-                        value={reserveQuantity}
-                        onChange={(e) => setReserveQuantity(Number(e.target.value))}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm"
-                      >
-                        {Array.from({ length: Math.min(availableQuantity, 5) }, (_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            {i + 1}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={handleReserve}
-                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 text-sm"
-                      >
-                        Confirm Reserve
-                      </button>
-                      <button
-                        onClick={() => setShowReserveForm(false)}
-                        className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-                <p className="text-gray-600 text-sm">
-                  This item is fully reserved
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Owner actions */}
-        {isOwner && (
-          <div className="flex space-x-2">
-            <button
-              onClick={() => onEdit?.(gift)}
-              className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 text-sm"
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => onDelete?.(gift.id)}
-              className="flex-1 bg-red-100 text-red-700 py-2 px-4 rounded-md hover:bg-red-200 text-sm"
-            >
-              Delete
-            </button>
-          </div>
-        )}
-
-        {/* Product link */}
-        {gift.productUrl && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <a
-              href={gift.productUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline text-sm"
-            >
-              View Product →
-            </a>
-          </div>
-        )}
-      </div>
+        <div className="flex gap-2">
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 text-white px-3 py-1.5 hover:bg-blue-700"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="rounded-md border px-3 py-1.5 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

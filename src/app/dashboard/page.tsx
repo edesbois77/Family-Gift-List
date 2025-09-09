@@ -1,45 +1,46 @@
+// src/app/dashboard/page.tsx
 export const dynamic = 'force-dynamic';
 
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import CopyButton from '@/components/CopyButton';
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     redirect('/login');
   }
 
-  const lists = await prisma.giftList.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-    include: {
-      _count: {
-        select: { gifts: true }
-      }
-    }
-  });
+  const [lists, recentReservations] = await Promise.all([
+    prisma.giftList.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { gifts: true } },
+      },
+    }),
+    prisma.reservation.findMany({
+      where: { userId: user.id },
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        gift: {
+          include: {
+            giftList: {
+              include: {
+                user: { select: { name: true, email: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
 
-  const recentReservations = await prisma.reservation.findMany({
-    where: { userId: user.id },
-    take: 5,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      gift: {
-        include: {
-          giftList: {
-            include: {
-              user: {
-                select: { name: true, email: true }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,24 +131,18 @@ export default async function DashboardPage() {
                         </Link>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Share link:</span>
                         <div className="flex items-center space-x-2">
                           <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                            {`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/share/${list.shareCode}`}
+                            {`${baseUrl}/share/${list.shareCode}`}
                           </code>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(
-                                `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/share/${list.shareCode}`
-                              );
-                            }}
+                          <CopyButton
+                            text={`${baseUrl}/share/${list.shareCode}`}
                             className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            Copy
-                          </button>
+                          />
                         </div>
                       </div>
                     </div>
@@ -160,7 +155,7 @@ export default async function DashboardPage() {
           {/* Recent Activity */}
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Recent Reservations</h2>
-            
+
             {recentReservations.length === 0 ? (
               <div className="bg-white rounded-lg shadow-md p-6 text-center">
                 <div className="text-2xl mb-2">📋</div>
@@ -182,11 +177,13 @@ export default async function DashboardPage() {
                       <span className="text-xs text-gray-500">
                         Qty: {reservation.quantity}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        reservation.isPurchased 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          reservation.isPurchased
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}
+                      >
                         {reservation.isPurchased ? 'Purchased' : 'Reserved'}
                       </span>
                     </div>
