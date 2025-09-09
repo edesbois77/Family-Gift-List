@@ -7,45 +7,93 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Source {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
-  feed     String
-  domain   String?
-  articles Article[]
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([name])
-  @@index([feed])
+  // Relations
+  giftLists     GiftList[]
+  reservations  Reservation[]
+  listAccess    ListAccess[]
+
+  @@map("users")
 }
 
-model Article {
-  id          Int       @id @default(autoincrement())
-  sourceId    Int
-  url         String    @unique
+model GiftList {
+  id          String   @id @default(cuid())
   title       String
-  author      String?
-  publishedAt DateTime?
-  content     String?
-  summary     String
+  description String?
+  shareCode   String   @unique @default(cuid())
+  isPublic    Boolean  @default(false)
+  eventDate   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gifts       Gift[]
+  reservations Reservation[]
+  listAccess  ListAccess[]
+
+  @@map("gift_lists")
+}
+
+model Gift {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
   imageUrl    String?
-  createdAt   DateTime  @default(now())
+  productUrl  String?
+  price       Float?
+  deliveryCost Float?
+  size        String?
+  quantity    Int     @default(1)
+  priority    Int     @default(3) // 1-5 scale, 5 being highest priority
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // tagging and scoring
-  teamTags   Json?
-  teamTagIdx String    @default("")
-  score      Int?
-  ingestedAt DateTime?
+  // Relations
+  giftListId   String
+  giftList     GiftList      @relation(fields: [giftListId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
 
-  // summary meta
-  summaryOrigin String?
-  summaryModel  String?
-  summaryChars  Int?
-  summarizedAt  DateTime?
+  @@map("gifts")
+}
 
-  source Source @relation(fields: [sourceId], references: [id])
+model Reservation {
+  id         String   @id @default(cuid())
+  quantity   Int      @default(1)
+  isPurchased Boolean @default(false)
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([publishedAt, createdAt, id])
-  @@index([sourceId])
-  @@index([score])
-  @@index([teamTagIdx])
+  // Relations
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giftId     String
+  gift       Gift     @relation(fields: [giftId], references: [id], onDelete: Cascade)
+  giftListId String
+  giftList   GiftList @relation(fields: [giftListId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, giftId])
+  @@map("reservations")
+}
+
+model ListAccess {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  giftListId String
+  giftList   GiftList @relation(fields: [giftListId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, giftListId])
+  @@map("list_access")
 }

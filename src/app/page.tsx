@@ -1,129 +1,79 @@
-"use client";
+import { getCurrentUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-import { useEffect, useState } from "react";
-import ArticleCard from "./components/ArticleCard";
-
-type Article = {
-  id: number;
-  title: string;
-  summary: string;
-  url: string;
-  imageUrl?: string;
-  publishedAt?: string;
-  source: { name: string };
-};
-
-type ClubFilter = "all" | "tottenham";
-
-export default function Home() {
-  const [items, setItems] = useState<Article[]>([]);
-  const [nextCursor, setNextCursor] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(false);
-  const [club, setClub] = useState<ClubFilter>("tottenham"); // default to Tottenham
-
-  async function load(cursor?: number | null, reset = false) {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (cursor) params.set("cursor", String(cursor));
-    if (club === "tottenham") params.set("club", "tottenham");
-
-    const res = await fetch(`/api/articles?${params.toString()}`, { cache: "no-store" });
-    const data = await res.json();
-
-    const newItems: Article[] = data.items || data.articles || [];
-    setItems((prev) => (reset || !cursor ? newItems : [...prev, ...newItems]));
-    setNextCursor(data.nextCursor ?? null);
-    setLoading(false);
+export default async function Home() {
+  const user = await getCurrentUser();
+  
+  if (user) {
+    redirect('/dashboard');
   }
-
-  async function fetchNow() {
-    setFetching(true);
-    try {
-      const res = await fetch("/api/fetch", { method: "POST" });
-      const data = await res.json();
-      await load(null, true); // reload from the top
-      alert(`Fetched, added ${data.added ?? 0} new articles`);
-    } catch (e) {
-      alert("Fetch failed");
-    } finally {
-      setFetching(false);
-    }
-  }
-
-  // initial load
-  useEffect(() => {
-    load(null, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // reload when the club filter changes
-  useEffect(() => {
-    load(null, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [club]);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <header className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold">Scouted, prototype</h1>
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-xl border overflow-hidden">
-            <button
-              onClick={() => setClub("all")}
-              className={`px-3 py-2 text-sm ${
-                club === "all" ? "bg-black text-white" : "bg-white"
-              }`}
-              aria-pressed={club === "all"}
-            >
-              All football
-            </button>
-            <button
-              onClick={() => setClub("tottenham")}
-              className={`px-3 py-2 text-sm ${
-                club === "tottenham" ? "bg-black text-white" : "bg-white"
-              }`}
-              aria-pressed={club === "tottenham"}
-            >
-              Tottenham only
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-gray-900 mb-4">
+            Gift List Manager
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Create and share gift lists with family and friends. Never give duplicate gifts again!
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 mb-12">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-3xl mb-4">🎁</div>
+            <h3 className="text-xl font-semibold mb-2">Create Multiple Lists</h3>
+            <p className="text-gray-600">
+              Organize gifts for different occasions - birthdays, Christmas, anniversaries, and more.
+            </p>
           </div>
 
-          <button
-            onClick={fetchNow}
-            disabled={fetching}
-            className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-60"
-          >
-            {fetching ? "Fetching..." : "Fetch new stories"}
-          </button>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-3xl mb-4">🔗</div>
+            <h3 className="text-xl font-semibold mb-2">Easy Sharing</h3>
+            <p className="text-gray-600">
+              Share your lists with unique links. Family and friends can see what you want and reserve items.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-3xl mb-4">🛒</div>
+            <h3 className="text-xl font-semibold mb-2">Reserve & Track</h3>
+            <p className="text-gray-600">
+              Reserve gifts to avoid duplicates. Track what's been purchased while keeping it a surprise.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="text-3xl mb-4">📱</div>
+            <h3 className="text-xl font-semibold mb-2">Add from Anywhere</h3>
+            <p className="text-gray-600">
+              Add gifts while browsing online stores. Save product details, images, and prices automatically.
+            </p>
+          </div>
         </div>
-      </header>
 
-      <section className="space-y-4">
-        {items.map((a) => (
-          <ArticleCard
-            key={a.id}
-            title={a.title}
-            summary={a.summary}
-            url={a.url}
-            source={a.source?.name || ""}
-            publishedAt={a.publishedAt}
-            imageUrl={a.imageUrl}
-          />
-        ))}
-      </section>
-
-      <div className="mt-6 flex justify-center">
-        {nextCursor && (
-          <button
-            onClick={() => load(nextCursor)}
-            disabled={loading}
-            className="rounded-xl border px-4 py-2"
-          >
-            {loading ? "Loading..." : "Load more"}
-          </button>
-        )}
+        <div className="text-center space-y-4">
+          <div className="space-x-4">
+            <a
+              href="/register"
+              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 inline-block"
+            >
+              Get Started Free
+            </a>
+            <a
+              href="/login"
+              className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold border-2 border-blue-600 hover:bg-blue-50 inline-block"
+            >
+              Sign In
+            </a>
+          </div>
+          <p className="text-sm text-gray-500">
+            No credit card required. Start creating lists in seconds.
+          </p>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
