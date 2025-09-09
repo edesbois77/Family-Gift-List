@@ -45,6 +45,5 @@ export async function getCurrentUser() {
 /**
  * Clear the cookie when signing out.
  */
-export function signOut() {
+export async function clearSession() {
   cookies().set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
-}
